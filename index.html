@@ -40,8 +40,10 @@
 <body>
 
 <header>
-    <span class="logo-emoji-hero">🍕🥯🍩</span>
-    <h4>PIZZA BAGEL DONUT</h4>
+    <div class="logo-wrapper">
+        <span class="logo-emoji-hero">🍕🥯🍩</span>
+        <h4>PIZZA BAGEL DONUT</h4>
+    </div>
 </header>
 
 <div id="game">
@@ -89,13 +91,14 @@
 
 <div class="modal" id="info-modal">
     <div class="modal-content" style="text-align:left;">
-        <h2 style="color:var(--sauce); text-transform:uppercase; letter-spacing:1px; font-size:1rem;">How to Unlock Your Pizza Box!</h2>
-        <div style="margin:15px 0; border-top:1px solid #eee; padding-top:10px; font-size:0.9rem; line-height:1.6;">
+        <h2 style="color:var(--sauce); text-transform:uppercase; letter-spacing:1px; font-size:1.1rem; margin-bottom:5px;">How to Unlock Your Pizza Box!</h2>
+        <p style="font-size:0.85rem; color:#555;">Guess the 3-digit daily code in 9 tries.</p>
+        <div style="margin:20px 0; border-top:1px solid #eee; padding-top:10px; font-size:0.9rem; line-height:1.6;">
             <div>🍕 <strong>PIZZA:</strong> Correct digit. Correct position.</div>
             <div>🥯 <strong>BAGEL:</strong> Correct digit. Move it elsewhere.</div>
             <div>🍩 <strong>DONUT:</strong> Wrong digit. Toss it out.</div>
         </div>
-        <button onclick="toggleModal('info-modal', false)" style="width:100%; padding:16px; background:var(--text); color:white; border:none; border-radius:4px; font-weight:700; text-transform:uppercase;">Start Shift</button>
+        <button onclick="toggleModal('info-modal', false)" style="width:100%; padding:16px; background:var(--text); color:white; border:none; border-radius:4px; font-weight:700; text-transform:uppercase;">Start Unboxing</button>
     </div>
 </div>
 
@@ -162,7 +165,6 @@
     async function updateGlobalStats(rowNum) {
         if (!FIREBASE_URL.includes("http")) return;
         try {
-            // Firebase "Transaction" equivalent for simple REST: GET then PATCH
             const res = await fetch(FIREBASE_URL);
             const data = await res.json() || { dist: [0,0,0,0,0,0,0,0,0] };
             data.dist[rowNum - 1]++;

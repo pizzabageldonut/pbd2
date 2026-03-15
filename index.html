@@ -38,15 +38,14 @@
 
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .modal-content { max-width: 400px; margin: 0 auto; text-align: center; }
-        
-        /* STATS STYLING */
+        .rule-line { display: flex; align-items: center; gap: 15px; margin: 12px 0; font-size: 0.95rem; line-height: 1.4; text-align: left; }
+
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
         .stat-val { font-size: 1.5rem; font-weight: 800; color: var(--sauce); display: block; }
         .stat-lbl { font-size: 0.6rem; text-transform: uppercase; font-weight: 700; color: #787c7e; }
-        
         .dist-container { text-align: left; margin-top: 25px; }
         .dist-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font-size: 0.8rem; font-weight: 700; }
-        .dist-bar { background: #787c7e; color: white; padding: 2px 8px; border-radius: 2px; min-width: 25px; text-align: right; transition: width 0.5s ease-out; }
+        .dist-bar { background: #787c7e; color: white; padding: 2px 8px; border-radius: 2px; min-width: 25px; text-align: right; }
     </style>
 </head>
 <body>
@@ -72,7 +71,7 @@
             </div>
             <div class="key-row">
                 <div class="key action" onclick="handlePress('DEL')">DELETE</div>
-                <div class="key action" style="background:var(--sauce); color:white;" onclick="handlePress('ENT')">SUBMIT ORDER</div>
+                <div class="key action" style="background:var(--sauce); color:white;" onclick="handlePress('ENT')">ENTER</div>
             </div>
         </div>
         <div class="toolbar">
@@ -83,48 +82,44 @@
     </div>
 </div>
 
-<div class="modal" id="info-modal">
+<div class="modal" id="info-modal" style="display: block;">
     <div class="modal-content" style="text-align:left;">
-        <h2 style="color:var(--sauce); text-transform:uppercase; letter-spacing:1px; font-size:1.1rem; text-align:center;">How to Unlock Your Pizza Box!</h2>
-        <p style="font-size:0.85rem; margin-bottom:15px; color:#555; text-align:center;">Guess the 3-digit daily code in <strong>6 tries</strong>.</p>
+        <p style="text-align:center; font-size:1.2rem; margin-bottom:10px;">🍕 🥯 🍩</p>
+        <h2 style="color:var(--sauce); text-transform:uppercase; letter-spacing:1px; font-size:1.1rem; text-align:center; margin-bottom:5px;">How to Play</h2>
+        <p style="font-size:0.85rem; color:#555; text-align:center; line-height:1.4;">Guess the hidden 3-digit code in <strong>6 tries</strong>.</p>
         <div style="margin:15px 0; border-top:1px solid #eee; padding-top:10px;">
-            <div style="display: flex; align-items: center; gap: 15px; margin: 12px 0; font-size: 0.95rem;"><span>🍕</span> <span><strong>KEEP IT:</strong> Correct digit. Correct position.</span></div>
-            <div style="display: flex; align-items: center; gap: 15px; margin: 12px 0; font-size: 0.95rem;"><span>🥯</span> <span><strong>MOVE IT:</strong> Correct digit. Wrong position.</span></div>
-            <div style="display: flex; align-items: center; gap: 15px; margin: 12px 0; font-size: 0.95rem;"><span>🍩</span> <span><strong>TOSS IT:</strong> Wrong digit. Not in the code.</span></div>
-            <div style="display: flex; align-items: center; gap: 15px; margin: 12px 0; font-size: 0.95rem;"><span>🍕🍕🍕</span> <span><strong>3 PIZZAS:</strong> Unlocks the Pizza Box.</span></div>
+            <div class="rule-line"><span>🍕</span> <span><strong>PIZZA:</strong> One number is correct and in the right spot.</span></div>
+            <div class="rule-line"><span>🥯</span> <span><strong>BAGEL:</strong> One number is correct, but in the wrong spot.</span></div>
+            <div class="rule-line"><span>🍩</span> <span><strong>DONUT:</strong> One number is not in the code at all.</span></div>
         </div>
-        <div style="background:#f0f0f0; padding:10px; border-radius:4px; font-size:0.75rem; color:#444; line-height:1.4; margin-bottom:15px;">
-            <strong>⚠️ PRO TIP:</strong> The emoji sequence does <u>not</u> match your digit order. Feedback is always grouped by 🍕, then 🥯, then 🍩.
+        <div style="background:#f0f0f0; padding:12px; border-radius:4px; font-size:0.8rem; color:#1a1a1a; line-height:1.4; margin-bottom:15px; border-left:4px solid var(--sauce);">
+            <p style="margin:0 0 5px 0; font-weight:800;">⚠️ The Shuffled Clue Rule</p>
+            The clues <strong>DO NOT</strong> match the order of your numbers.
         </div>
-        <p style="font-size: 0.75rem; color: #888; text-align:center; margin-bottom:15px;"><em>All numbers in the code are unique.</em></p>
-        <button onclick="toggleModal('info-modal', false)" style="width:100%; padding:16px; background:var(--text); color:white; border:none; border-radius:4px; font-weight:700; text-transform:uppercase;">Start</button>
+        <button onclick="toggleModal('info-modal', false)" style="width:100%; padding:16px; background:var(--text); color:white; border:none; border-radius:4px; font-weight:700; text-transform:uppercase; cursor:pointer;">Start</button>
     </div>
 </div>
 
 <div class="modal" id="stats-modal">
     <div class="modal-content">
-        <h2 style="color:var(--sauce); text-transform:uppercase; letter-spacing:1px; font-size:1.1rem;">Statistics</h2>
+        <h2 style="color:var(--sauce); text-transform:uppercase; letter-spacing:1px; font-size:1.1rem;">Your Statistics</h2>
         <div class="stats-grid">
             <div><span class="stat-val" id="s-played">0</span><span class="stat-lbl">Played</span></div>
             <div><span class="stat-val" id="s-unboxed">0</span><span class="stat-lbl">Wins</span></div>
             <div><span class="stat-val" id="s-avg">0</span><span class="stat-lbl">Avg Row</span></div>
         </div>
-        
         <div class="dist-container">
-            <h3 style="font-size:0.7rem; text-transform:uppercase; margin-bottom:10px; color:var(--sauce)">Global Distribution (All Chefs)</h3>
-            <div id="dist-chart">Loading order history...</div>
+            <h3 style="font-size:0.7rem; text-transform:uppercase; margin-bottom:10px; color:var(--sauce)">Today's Global Distribution</h3>
+            <div id="dist-chart">Loading today's stats...</div>
         </div>
-        
-        <button onclick="toggleModal('stats-modal', false)" style="width:100%; padding:16px; background:var(--text); color:white; border:none; border-radius:4px; font-weight:700; text-transform:uppercase; margin-top:20px;">Close</button>
+        <button onclick="toggleModal('stats-modal', false)" style="width:100%; padding:16px; background:var(--text); color:white; border:none; border-radius:4px; font-weight:700; text-transform:uppercase; margin-top:20px; cursor:pointer;">Close</button>
     </div>
 </div>
 
 <script>
-    // --- DATABASE CONFIG ---
-    // PASTE YOUR FIREBASE URL BELOW (Include the .json at the end!)
-    const FIREBASE_URL = "https://pizzabageldonut-default-rtdb.firebaseio.com/stats.json";
-
     const today = new Date().toISOString().slice(0, 10);
+    // DAILY LOGIC: URL is unique to today's date
+    const FIREBASE_URL = `https://pizzabageldonut-default-rtdb.firebaseio.com/stats/${today}.json`;
     
     function generateDailyCode() {
         const seed = today.split('-').reduce((a, b) => a + parseInt(b), 0);
@@ -138,7 +133,9 @@
     
     const CODE = generateDailyCode();
     let currentInput = "", tries = 0;
-    let localStats = JSON.parse(localStorage.getItem('pbd_v6')) || { played: 0, wins: 0, totalRows: 0, lastDate: "", history: [] };
+    let localStats = JSON.parse(localStorage.getItem('pbd_v8')) || { played: 0, wins: 0, totalRows: 0, lastDate: "", history: [] };
+
+    window.onload = () => { if (localStats.lastDate === today) toggleModal('info-modal', false); };
 
     function handlePress(val) {
         if (localStats.lastDate === today) return;
@@ -175,39 +172,34 @@
                 await updateGlobalStats(tries);
             }
             localStats.lastDate = today;
-            localStorage.setItem('pbd_v6', JSON.stringify(localStats));
+            localStorage.setItem('pbd_v8', JSON.stringify(localStats));
             showEnd(currentInput === CODE);
         }
         currentInput = ""; updateDisplay();
     }
 
     async function updateGlobalStats(rowNum) {
-        if (!FIREBASE_URL || FIREBASE_URL.includes("YOUR_URL")) return;
         try {
             const res = await fetch(FIREBASE_URL);
             const data = await res.json() || { dist: [0,0,0,0,0,0] };
             if(!data.dist) data.dist = [0,0,0,0,0,0];
             data.dist[rowNum - 1]++;
-            await fetch(FIREBASE_URL, {
-                method: 'PATCH',
-                body: JSON.stringify({ dist: data.dist })
-            });
-        } catch (e) { console.error("Database error", e); }
+            await fetch(FIREBASE_URL, { method: 'PATCH', body: JSON.stringify({ dist: data.dist }) });
+        } catch (e) { console.error(e); }
     }
 
     async function fetchGlobalStats() {
-        if (!FIREBASE_URL || FIREBASE_URL.includes("YOUR_URL")) return [0,0,0,0,0,0];
         try {
             const res = await fetch(FIREBASE_URL);
             const data = await res.json();
-            return data.dist || [0,0,0,0,0,0];
+            return data && data.dist ? data.dist : [0,0,0,0,0,0];
         } catch (e) { return [0,0,0,0,0,0]; }
     }
 
     function renderRow(g, e) {
         const row = document.createElement('div'); row.className = 'guess-row';
         if (e === "🍕🍕🍕") row.className += ' winner';
-        row.innerHTML = '<div class="guess-code">' + g + '</div><div class="guess-emojis">' + e + '</div>';
+        row.innerHTML = `<div class="guess-code">${g}</div><div class="guess-emojis">${e}</div>`;
         const log = document.getElementById('guess-log');
         log.appendChild(row);
         log.scrollTo({ top: log.scrollHeight, behavior: 'smooth' });
@@ -221,6 +213,7 @@
         msg.innerText = win ? "You Win 🍕🍕🍕" : "KITCHEN CLOSED! CODE: " + CODE;
         const sBtn = document.getElementById('share-icon');
         sBtn.style.opacity = "1"; sBtn.style.pointerEvents = "auto";
+        setTimeout(() => toggleModal('stats-modal', true), 1500);
     }
 
     async function toggleModal(id, s) { 
@@ -228,8 +221,7 @@
         if (id === 'stats-modal') {
             document.getElementById('s-played').innerText = localStats.played;
             document.getElementById('s-unboxed').innerText = localStats.wins;
-            const avg = localStats.wins === 0 ? 0 : (localStats.totalRows / localStats.wins).toFixed(1);
-            document.getElementById('s-avg').innerText = avg;
+            document.getElementById('s-avg').innerText = localStats.wins === 0 ? 0 : (localStats.totalRows / localStats.wins).toFixed(1);
             
             const globalDist = await fetchGlobalStats();
             const chart = document.getElementById('dist-chart');

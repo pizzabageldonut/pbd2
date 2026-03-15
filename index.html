@@ -28,7 +28,7 @@
 
         .keypad-area { padding: 5px; display: flex; flex-direction: column; gap: 5px; }
         .key-row { display: flex; gap: 5px; width: 100%; }
-        .key { flex: 1; height: 46px; background: var(--key); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .key { flex: 1; height: 46px; background: var(--key); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; cursor: pointer; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         .key:active { background: #bbb; }
         .key.action { background: #c5c5c3; font-size: 0.7rem; letter-spacing: 0.5px; flex: 2; }
 
@@ -37,7 +37,7 @@
 
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .modal-content { max-width: 400px; margin: 0 auto; }
-        .rule-line { display: flex; align-items: center; gap: 15px; margin: 15px 0; font-size: 0.95rem; line-height: 1.4; text-align: left; }
+        .rule-line { display: flex; align-items: center; gap: 15px; margin: 18px 0; font-size: 0.95rem; line-height: 1.4; text-align: left; }
     </style>
 </head>
 <body>
@@ -81,134 +81,4 @@
         <h2 style="color:var(--sauce); text-transform:uppercase; letter-spacing:1px; font-size:1.1rem; text-align:center;">How to Unlock Your Pizza Box!</h2>
         <p style="font-size:0.85rem; margin-bottom:20px; color:#555; text-align:center;">Guess the 3-digit daily code in <strong>6 tries</strong>.</p>
         
-        <div style="margin:20px 0; border-top:1px solid #eee; padding-top:10px;">
-            <div class="rule-line"><span>🍕</span> <span><strong>KEEP IT:</strong> Correct digit. Correct position.</span></div>
-            <div class="rule-line"><span>🥯</span> <span><strong>MOVE IT:</strong> Correct digit. Wrong position.</span></div>
-            <div class="rule-line"><span>🍩</span> <span><strong>TOSS IT:</strong> Wrong digit. Not in the code.</span></div>
-        </div>
-
-        <div style="background:#f0f0f0; padding:10px; border-radius:4px; font-size:0.75rem; color:#444; line-height:1.4; margin-bottom:15px;">
-            <strong>⚠️ PRO TIP:</strong> The emoji sequence does <u>not</u> match your digit order. Feedback is always shown as 🍕, then 🥯, then 🍩.
-        </div>
-        
-        <button onclick="toggleModal('info-modal', false)" style="width:100%; padding:16px; background:var(--text); color:white; border:none; border-radius:4px; font-weight:700; text-transform:uppercase;">Start</button>
-    </div>
-</div>
-
-<div class="modal" id="stats-modal">
-    <div class="modal-content">
-        <h2 style="color:var(--sauce); text-transform:uppercase; letter-spacing:1px; font-size:1.1rem;">Statistics</h2>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:20px 0;">
-            <div><span style="font-size:1.6rem; font-weight:800; color:var(--sauce);" id="s-played">0</span><br><span style="font-size:0.6rem; text-transform:uppercase; font-weight:700; color:#787c7e;">Shifts</span></div>
-            <div><span style="font-size:1.6rem; font-weight:800; color:var(--sauce);" id="s-unboxed">0</span><br><span style="font-size:0.6rem; text-transform:uppercase; font-weight:700; color:#787c7e;">Unboxed</span></div>
-        </div>
-        <button onclick="toggleModal('stats-modal', false)" style="width:100%; padding:16px; background:var(--text); color:white; border:none; border-radius:4px; font-weight:700; text-transform:uppercase;">Close</button>
-    </div>
-</div>
-
-<script>
-    const today = new Date().toISOString().slice(0, 10);
-    const CODE = generateCode();
-    let currentInput = "", tries = 0;
-    let localStats = JSON.parse(localStorage.getItem('pbd_stats_v3')) || { played: 0, unboxed: 0, lastDate: "", history: [] };
-
-    function generateCode() {
-        const seed = today.split('-').reduce((a, b) => a + parseInt(b), 0);
-        let pool = [0,1,2,3,4,5,6,7,8,9], res = "";
-        for(let i=0; i<3; i++) {
-            let idx = (seed + (i*17)) % pool.length;
-            res += pool.splice(idx, 1);
-        }
-        return res;
-    }
-
-    function press(val) {
-        if (localStats.lastDate === today) return;
-        if (val === 'DEL') currentInput = currentInput.slice(0, -1);
-        else if (val === 'ENT' && currentInput.length === 3) submitGuess();
-        else if (currentInput.length < 3 && !currentInput.includes(val)) currentInput += val;
-        updateDisplay();
-    }
-
-    function updateDisplay() {
-        for (let i = 0; i < 3; i++) {
-            const box = document.getElementById('d' + i);
-            box.innerText = currentInput[i] || "";
-            box.classList.toggle('filled', !!currentInput[i]);
-        }
-    }
-
-    function submitGuess() {
-        tries++;
-        let p=0, b=0, d=0;
-        let gArr = currentInput.split(''), cArr = CODE.split('');
-        gArr.forEach((n, i) => { if (n === cArr[i]) p++; else if (cArr.includes(n)) b++; else d++; });
-        const emojis = "🍕".repeat(p) + "🥯".repeat(b) + "🍩".repeat(d);
-        renderRow(currentInput, emojis);
-        localStats.history.push({g: currentInput, e: emojis});
-        
-        if (currentInput === CODE || tries >= 6) {
-            localStats.played++;
-            if (currentInput === CODE) { 
-                localStats.unboxed++; 
-                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); 
-            }
-            localStats.lastDate = today;
-            localStorage.setItem('pbd_stats_v3', JSON.stringify(localStats));
-            showEnd(currentInput === CODE);
-        }
-        currentInput = ""; updateDisplay();
-    }
-
-    function renderRow(g, e) {
-        const row = document.createElement('div'); row.className = 'guess-row';
-        if (e === "🍕🍕🍕") row.className += ' winner';
-        row.innerHTML = `<div class="guess-code">${g}</div><div class="guess-emojis">${e}</div>`;
-        const log = document.getElementById('guess-log');
-        log.appendChild(row);
-        log.scrollTo({ top: log.scrollHeight, behavior: 'smooth' });
-    }
-
-    function showEnd(win) {
-        document.getElementById('keyboard').style.display = 'none';
-        document.getElementById('input-boxes').style.display = 'none';
-        const msg = document.getElementById('end-msg');
-        msg.style.display = 'block';
-        msg.innerText = win ? "PIZZA BOX OPENED! 🍕" : "KITCHEN CLOSED! CODE: " + CODE;
-        
-        const shareBtn = document.getElementById('share-icon');
-        shareBtn.style.opacity = "1";
-        shareBtn.style.pointerEvents = "auto";
-    }
-
-    function toggleModal(id, s) { 
-        document.getElementById(id).style.display = s ? 'block' : 'none';
-        if (id === 'stats-modal') {
-            document.getElementById('s-played').innerText = localStats.played;
-            document.getElementById('s-unboxed').innerText = localStats.unboxed;
-        }
-    }
-    
-    function share() {
-        const win = localStats.history.some(h => h.e === "🍕🍕🍕");
-        const emojiGrid = localStats.history.map(h => h.e).join('\n');
-        const text = `🍕🥯🍩 PIZZA BAGEL DONUT\nShift: ${today}\nScore: ${win ? localStats.history.length : 'X'}/6\n\n${emojiGrid}\n\nhttps://pizzabageldonut.com`;
-
-        if (navigator.share) {
-            navigator.share({ text: text }).catch(() => copyFallback(text));
-        } else {
-            copyFallback(text);
-        }
-    }
-
-    function copyFallback(text) {
-        navigator.clipboard.writeText(text).then(() => alert("Box Score Copied!"));
-    }
-
-    if (localStats.lastDate === today) {
-        localStats.history.forEach(h => renderRow(h.g, h.e));
-        showEnd(localStats.history.some(h => h.e === "🍕🍕🍕"));
-    }
-</script>
-</body>
-</html>
+        <div style

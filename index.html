@@ -135,7 +135,41 @@
         <button onclick="toggleModal('info-modal', false)" style="width:100%; padding:18px; background:var(--text); color:white; border:none; border-radius:4px; font-weight:700; cursor:pointer; margin-top:15px; text-transform:uppercase; letter-spacing:1px;">Start</button>
     </div>
 </div>
-           
+function share() {
+        if (localStats.lastDate !== today) return;
+        
+        const win = localStats.history.some(h => h.e === "🍕🍕🍕");
+        const emojiGrid = localStats.history.map(h => h.e).join('\n');
+        
+        // Branded Share Text
+        const text = `🍕🥯🍩 PIZZA BAGEL DONUT\nShift: ${today}\nScore: ${win ? localStats.history.length : 'X'}/6\n\n${emojiGrid}\n\nhttps://pizzabageldonut.com`;
+
+        if (navigator.share) {
+            navigator.share({
+                text: text
+            }).catch(console.error);
+        } else {
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Box Score Copied to Clipboard!");
+            });
+        }
+    }
+
+    function showEnd(win) {
+        document.getElementById('keyboard').style.display = 'none';
+        document.getElementById('input-boxes').style.display = 'none';
+        const msg = document.getElementById('end-msg');
+        msg.style.display = 'block';
+        msg.innerText = win ? "PIZZA BOX OPENED! 🍕" : "KITCHEN CLOSED! CODE: " + CODE;
+        
+        // Enable Share Button
+        const shareBtn = document.getElementById('share-icon');
+        shareBtn.style.opacity = "1";
+        shareBtn.style.pointerEvents = "auto";
+        
+        // Auto-open stats to show the result
+        setTimeout(() => toggleModal('stats-modal', true), 1500);
+    }           
 <script>
     const FIREBASE_URL = "https://pizzabageldonut-game-default-rtdb.firebaseio.com/stats.json";
     const today = new Date().toISOString().slice(0, 10);

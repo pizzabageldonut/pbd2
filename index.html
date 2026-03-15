@@ -83,7 +83,7 @@
         </div>
         <div class="dist-container">
             <h3 style="font-size:0.7rem; text-transform:uppercase; margin-bottom:10px; color:var(--sauce)">Global Distribution (All Chefs)</h3>
-            <div id="dist-chart">Loading order history...</div>
+            <div id="dist-chart">Loading history...</div>
         </div>
         <button onclick="toggleModal('stats-modal', false)" style="width:100%; padding:15px; background:var(--text); color:white; border:none; border-radius:4px; font-weight:700; text-transform:uppercase; margin-top:25px;">Close</button>
     </div>
@@ -93,19 +93,17 @@
     <div class="modal-content" style="text-align:left;">
         <h2 style="color:var(--sauce); text-transform:uppercase; letter-spacing:1px; font-size:1.1rem; margin-bottom:5px;">How to Unlock Your Pizza Box!</h2>
         <p style="font-size:0.85rem; color:#555;">Guess the 3-digit daily code in 9 tries.</p>
-        <div style="margin:20px 0; border-top:1px solid #eee; padding-top:10px; font-size:0.9rem; line-height:1.6;">
-            <div>🍕 <strong>PIZZA:</strong> Correct digit. Correct position.</div>
-            <div>🥯 <strong>BAGEL:</strong> Correct digit. Move it elsewhere.</div>
-            <div>🍩 <strong>DONUT:</strong> Wrong digit. Toss it out.</div>
+        <div style="margin:15px 0; border-top:1px solid #eee; padding-top:10px; font-size:0.9rem; line-height:1.6;">
+            <div>🍕 <strong>PIZZA:</strong> Correct digit. Correct position.</span></div>
+            <div>🥯 <strong>BAGEL:</strong> Correct digit. Move it elsewhere.</span></div>
+            <div>🍩 <strong>DONUT:</strong> Wrong digit. Toss it out.</span></div>
         </div>
         <button onclick="toggleModal('info-modal', false)" style="width:100%; padding:16px; background:var(--text); color:white; border:none; border-radius:4px; font-weight:700; text-transform:uppercase;">Start Unboxing</button>
     </div>
 </div>
 
 <script>
-    // --- DATABASE CONFIG ---
-    // PASTE YOUR FIREBASE URL BELOW (Include the .json at the end!)
-    const FIREBASE_URL = "https://pizzabageldonut-game-default-rtdb.firebaseio.com/";
+    const FIREBASE_URL = "https://pizzabageldonut-game-default-rtdb.firebaseio.com/stats.json";
 
     const today = new Date().toISOString().slice(0, 10);
     const CODE = generateCode();
@@ -163,20 +161,19 @@
     }
 
     async function updateGlobalStats(rowNum) {
-        if (!FIREBASE_URL.includes("http")) return;
         try {
             const res = await fetch(FIREBASE_URL);
             const data = await res.json() || { dist: [0,0,0,0,0,0,0,0,0] };
+            if(!data.dist) data.dist = [0,0,0,0,0,0,0,0,0];
             data.dist[rowNum - 1]++;
             await fetch(FIREBASE_URL, {
                 method: 'PATCH',
                 body: JSON.stringify({ dist: data.dist })
             });
-        } catch (e) { console.error("Kitchen ticket error", e); }
+        } catch (e) { console.error("Database connection issue", e); }
     }
 
     async function fetchGlobalStats() {
-        if (!FIREBASE_URL.includes("http")) return [0,0,0,0,0,0,0,0,0];
         try {
             const res = await fetch(FIREBASE_URL);
             const data = await res.json();
@@ -223,8 +220,10 @@
     
     function share() {
         const win = localStats.history.some(h => h.e === "🍕🍕🍕");
-        const text = `🍕🥯🍩 Pizza Bagel Donut\nShift: ${today}\nScore: ${win ? localStats.history.length : 'X'}/9\n#PizzaBagelDonut`;
-        navigator.clipboard.writeText(text).then(() => alert("Box Score Copied!"));
+        const emojiLines = localStats.history.map(h => h.e).join('\n');
+        const scoreLine = win ? `${localStats.history.length}/9` : 'X/9';
+        const text = `🍕🥯🍩 Pizza Bagel Donut\nShift: ${today}\nScore: ${scoreLine}\n\n${emojiLines}\n\n#PizzaBagelDonut`;
+        navigator.clipboard.writeText(text).then(() => alert("Spoiler-free box score copied!"));
     }
 
     if (localStats.lastDate === today) {

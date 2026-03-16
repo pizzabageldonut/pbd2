@@ -164,12 +164,18 @@
             font-weight: 800;
             color: #000;
             background: #fff;
+            transition: all 0.2s ease;
         }
 
         .digit-box.filled {
             background: #000;
             color: #fff;
             border-color: #000;
+        }
+
+        .digit-box.error {
+            color: var(--sauce);
+            border-color: var(--sauce);
         }
 
         .keypad-area {
@@ -457,6 +463,7 @@ const FIREBASE_BASE = "https://pizzabageldonut-game-default-rtdb.firebaseio.com"
 
 let DIGITS = parseInt(localStorage.getItem("pbd_digits"), 10) || 3;
 let currentInput = "";
+let isErrorState = false;
 
 function difficultyKey() {
     if (DIGITS === 3) return "easy";
@@ -601,6 +608,7 @@ function updateDifficultyButtons() {
 }
 
 function setDifficulty(n) {
+    // Before switching, save progress only if the game isn't finished today
     if (localStats.lastDate !== today) {
         saveDraft();
     }
@@ -608,7 +616,7 @@ function setDifficulty(n) {
     DIGITS = n;
     safeSet("pbd_digits", String(n));
     CODE = generateDailyCode();
-    loadLocalStats();
+    loadLocalStats(); // Reload stats for the new difficulty
     updateDifficultyButtons();
     createInputBoxes();
 
@@ -626,22 +634,18 @@ function setDifficulty(n) {
         shareBtn.style.pointerEvents = "none";
     }
 
-    const infoModal = document.getElementById("info-modal");
-    if (infoModal && infoModal.style.display !== "none") {
-        createInputBoxes();
-    }
-
+    // Check if the game for this difficulty was already finished today
     if (localStats.lastDate === today) {
         localStats.history.forEach(h => renderRow(h.g, h.e));
         showEnd(localStats.history.some(h => h.e === "🍕".repeat(DIGITS)), false);
         return;
     }
 
+    // Otherwise load the mid-game draft
     const draft = loadDraft();
     localStats.history = draft.history;
     currentInput = draft.currentInput;
 
-    if (log) log.innerHTML = "";
     localStats.history.forEach(h => renderRow(h.g, h.e));
     updateDisplay();
 
@@ -708,6 +712,7 @@ window.onload = () => {
     updateDifficultyButtons();
     createInputBoxes();
 
+    // If today is the last played date for the CURRENT difficulty, show end screen
     if (localStats.lastDate === today) {
         toggleModal("info-modal", false);
         localStats.history.forEach(h => renderRow(h.g, h.e));
@@ -743,45 +748,28 @@ function startGame() {
 
     createInputBoxes();
 
-    if (localStats.lastDate !== today) {
+    // Check if the user is locked out for today
+    if (localStats.lastDate === today) {
+        showEnd(localStats.history.some(h => h.e === "🍕".repeat(DIGITS)), false);
+    } else {
         if (keyboard) keyboard.style.display = "";
         if (inputBoxes) inputBoxes.style.display = "";
         if (endMsg) endMsg.style.display = "none";
     }
 }
 
-function resetBoard() {
-    currentInput = "";
-
-    const log = document.getElementById("guess-log");
-    const keyboard = document.getElementById("keyboard");
-    const inputBoxes = document.getElementById("input-boxes");
-    const endMsg = document.getElementById("end-msg");
-    const shareBtn = document.getElementById("share-icon");
-
-    if (log) log.innerHTML = "";
-    if (keyboard) keyboard.style.display = "";
-    if (inputBoxes) inputBoxes.style.display = "";
-    if (endMsg) {
-        endMsg.style.display = "none";
-        endMsg.innerText = "";
-    }
-    if (shareBtn) {
-        shareBtn.style.opacity = "0.2";
-        shareBtn.style.pointerEvents = "none";
-    }
-
-    createInputBoxes();
-    updateDisplay();
-}
-
 function handlePress(val) {
-    if (localStats.lastDate === today) return;
+    // Block input if game is over for today
+    if (localStats.lastDate === today || isErrorState) return;
 
     if (val === "DEL") {
         currentInput = currentInput.slice(0, -1);
-    } else if (val === "ENT" && currentInput.length === DIGITS) {
-        submitGuess();
+    } else if (val === "ENT") {
+        if (currentInput.length === DIGITS) {
+            submitGuess();
+        } else {
+            showInputError();
+        }
         return;
     } else if (currentInput.length < DIGITS && !currentInput.includes(val)) {
         currentInput += val;
@@ -790,12 +778,35 @@ function handlePress(val) {
     updateDisplay();
 }
 
+function showInputError() {
+    isErrorState = true;
+    for (let i = 0; i < DIGITS; i++) {
+        const box = document.getElementById("d" + i);
+        if (box && !currentInput[i]) {
+            box.innerText = "X";
+            box.classList.add("error");
+        }
+    }
+    setTimeout(() => {
+        for (let i = 0; i < DIGITS; i++) {
+            const box = document.getElementById("d" + i);
+            if (box && box.classList.contains("error")) {
+                box.innerText = "";
+                box.classList.remove("error");
+            }
+        }
+        isErrorState = false;
+    }, 600);
+}
+
 function updateDisplay() {
+    if (isErrorState) return;
     for (let i = 0; i < DIGITS; i++) {
         const box = document.getElementById("d" + i);
         if (!box) continue;
         box.innerText = currentInput[i] || "";
         box.classList.toggle("filled", !!currentInput[i]);
+        box.classList.remove("error");
     }
 }
 
@@ -823,7 +834,6 @@ async function submitGuess() {
         const rowsUsed = localStats.history.length;
 
         localStats.played++;
-
         if (win) {
             localStats.wins++;
             localStats.totalRows += rowsUsed;
@@ -837,7 +847,7 @@ async function submitGuess() {
             }
         }
 
-        localStats.lastDate = today;
+        localStats.lastDate = today; // Mark as played today
         saveLocalStats();
 
         await syncGlobalData({
@@ -857,13 +867,9 @@ async function submitGuess() {
 
 async function syncGlobalData(game) {
     const playerPath = `${FIREBASE_BASE}/stats/${today}/${difficultyKey()}/${playerId}.json`;
-
     try {
-        const res = await fetch(`${playerPath}?t=${Date.now()}`, {
-            cache: "no-store"
-        });
+        const res = await fetch(`${playerPath}?t=${Date.now()}`, { cache: "no-store" });
         const existing = await res.json();
-
         if (existing) return;
 
         await fetch(playerPath, {
@@ -881,9 +887,7 @@ async function fetchAndRenderGlobal() {
     if (!chart) return;
 
     try {
-        const res = await fetch(`${getStatsUrl()}?t=${Date.now()}`, {
-            cache: "no-store"
-        });
+        const res = await fetch(`${getStatsUrl()}?t=${Date.now()}`, { cache: "no-store" });
         const data = await res.json();
 
         const dist = [0, 0, 0, 0, 0, 0, 0];
@@ -893,9 +897,7 @@ async function fetchAndRenderGlobal() {
         if (data) {
             Object.values(data).forEach(game => {
                 if (!game) return;
-
                 totalPlayed++;
-
                 if (game.win === true && game.rows >= 1 && game.rows <= 6) {
                     dist[game.rows - 1]++;
                     totalWins++;
@@ -906,11 +908,9 @@ async function fetchAndRenderGlobal() {
         }
 
         const maxVal = Math.max(...dist, 1);
-
         chart.innerHTML = dist.map((count, i) => {
             const label = i < 6 ? (i + 1) : "X";
             const width = count > 0 ? Math.max((count / maxVal) * 100, 8) : 8;
-
             return `
                 <div class="dist-row">
                     <span>${label}</span>
@@ -919,20 +919,11 @@ async function fetchAndRenderGlobal() {
             `;
         }).join("");
 
-        const gPlayed = document.getElementById("g-played");
-        const gWins = document.getElementById("g-wins");
-        const gWinrate = document.getElementById("g-winrate");
-
-        if (gPlayed) gPlayed.innerText = totalPlayed;
-        if (gWins) gWins.innerText = totalWins;
-        if (gWinrate) {
-            gWinrate.innerText = totalPlayed === 0
-                ? "0%"
-                : `${Math.round((totalWins / totalPlayed) * 100)}%`;
-        }
+        document.getElementById("g-played").innerText = totalPlayed;
+        document.getElementById("g-wins").innerText = totalWins;
+        document.getElementById("g-winrate").innerText = totalPlayed === 0 ? "0%" : `${Math.round((totalWins / totalPlayed) * 100)}%`;
 
     } catch (e) {
-        console.error("Global stats read error:", e);
         chart.innerText = "Today's stats unavailable";
     }
 }
@@ -946,16 +937,10 @@ function updateStatsUI() {
     if (sPlayed) sPlayed.innerText = localStats.played;
     if (sWins) sWins.innerText = localStats.wins;
 
-    const avg = localStats.wins === 0
-        ? "0"
-        : (localStats.totalRows / localStats.wins).toFixed(1);
-
+    const avg = localStats.wins === 0 ? "0" : (localStats.totalRows / localStats.wins).toFixed(1);
     if (sAvg) sAvg.innerText = avg;
 
-    const winRate = localStats.played === 0
-        ? "0%"
-        : `${Math.round((localStats.wins / localStats.played) * 100)}%`;
-
+    const winRate = localStats.played === 0 ? "0%" : `${Math.round((localStats.wins / localStats.played) * 100)}%`;
     if (sWinrate) sWinrate.innerText = winRate;
 }
 

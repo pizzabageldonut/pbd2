@@ -417,14 +417,14 @@
         <h2 style="color:var(--sauce); text-transform:uppercase; letter-spacing:1px; font-size:1.1rem; text-align:center; margin-bottom:5px;">Welcome to the Pizza Bagel Donut Game!</h2>
         <p style="font-size:0.95rem; font-weight:700; margin:15px 0 5px 0; text-align:center;">How to Play</p>
         <p style="font-size:0.85rem; color:#555; text-align:center; line-height:1.4;">
-            Guess the hidden code in <strong>6 tries</strong>. Easy uses 3 digits, Medium uses 4, and Hard uses 5.
+            Guess the numbers in <strong>6 tries</strong>. Easy uses 3 digits, Medium uses 4, and Hard uses 5.
             After each guess, you will receive clues:
         </p>
 
         <div style="margin:15px 0; border-top:1px solid #eee; padding-top:10px;">
             <div class="rule-line"><span>🍕</span> <span><strong>PIZZA:</strong> A number is correct and in the right spot.</span></div>
             <div class="rule-line"><span>🥯</span> <span><strong>BAGEL:</strong> A number is correct, but in the wrong spot.</span></div>
-            <div class="rule-line"><span>🍩</span> <span><strong>DONUT:</strong> A number is not in the code at all.</span></div>
+            <div class="rule-line"><span>🍩</span> <span><strong>DONUT:</strong> A number is not in the puzzle at all.</span></div>
         </div>
 
         <div style="background:#f0f0f0; padding:12px; border-radius:4px; font-size:0.8rem; color:#1a1a1a; line-height:1.4; margin-bottom:15px; border-left:4px solid var(--sauce);">
@@ -608,7 +608,6 @@ function updateDifficultyButtons() {
 }
 
 function setDifficulty(n) {
-    // Before switching, save progress only if the game isn't finished today
     if (localStats.lastDate !== today) {
         saveDraft();
     }
@@ -616,7 +615,7 @@ function setDifficulty(n) {
     DIGITS = n;
     safeSet("pbd_digits", String(n));
     CODE = generateDailyCode();
-    loadLocalStats(); // Reload stats for the new difficulty
+    loadLocalStats();
     updateDifficultyButtons();
     createInputBoxes();
 
@@ -634,18 +633,22 @@ function setDifficulty(n) {
         shareBtn.style.pointerEvents = "none";
     }
 
-    // Check if the game for this difficulty was already finished today
+    const infoModal = document.getElementById("info-modal");
+    if (infoModal && infoModal.style.display !== "none") {
+        createInputBoxes();
+    }
+
     if (localStats.lastDate === today) {
         localStats.history.forEach(h => renderRow(h.g, h.e));
         showEnd(localStats.history.some(h => h.e === "🍕".repeat(DIGITS)), false);
         return;
     }
 
-    // Otherwise load the mid-game draft
     const draft = loadDraft();
     localStats.history = draft.history;
     currentInput = draft.currentInput;
 
+    if (log) log.innerHTML = "";
     localStats.history.forEach(h => renderRow(h.g, h.e));
     updateDisplay();
 
@@ -712,7 +715,6 @@ window.onload = () => {
     updateDifficultyButtons();
     createInputBoxes();
 
-    // If today is the last played date for the CURRENT difficulty, show end screen
     if (localStats.lastDate === today) {
         toggleModal("info-modal", false);
         localStats.history.forEach(h => renderRow(h.g, h.e));
@@ -748,18 +750,41 @@ function startGame() {
 
     createInputBoxes();
 
-    // Check if the user is locked out for today
-    if (localStats.lastDate === today) {
-        showEnd(localStats.history.some(h => h.e === "🍕".repeat(DIGITS)), false);
-    } else {
+    if (localStats.lastDate !== today) {
         if (keyboard) keyboard.style.display = "";
         if (inputBoxes) inputBoxes.style.display = "";
         if (endMsg) endMsg.style.display = "none";
+    } else {
+        showEnd(localStats.history.some(h => h.e === "🍕".repeat(DIGITS)), false);
     }
 }
 
+function resetBoard() {
+    currentInput = "";
+
+    const log = document.getElementById("guess-log");
+    const keyboard = document.getElementById("keyboard");
+    const inputBoxes = document.getElementById("input-boxes");
+    const endMsg = document.getElementById("end-msg");
+    const shareBtn = document.getElementById("share-icon");
+
+    if (log) log.innerHTML = "";
+    if (keyboard) keyboard.style.display = "";
+    if (inputBoxes) inputBoxes.style.display = "";
+    if (endMsg) {
+        endMsg.style.display = "none";
+        endMsg.innerText = "";
+    }
+    if (shareBtn) {
+        shareBtn.style.opacity = "0.2";
+        shareBtn.style.pointerEvents = "none";
+    }
+
+    createInputBoxes();
+    updateDisplay();
+}
+
 function handlePress(val) {
-    // Block input if game is over for today
     if (localStats.lastDate === today || isErrorState) return;
 
     if (val === "DEL") {
@@ -811,7 +836,7 @@ function updateDisplay() {
 }
 
 async function submitGuess() {
-    if (currentInput.length !== DIGITS) return;
+    if (currentInput.length !== DIGITS || localStats.lastDate === today) return;
 
     let p = 0, b = 0, d = 0;
     const gArr = currentInput.split("");
@@ -834,6 +859,7 @@ async function submitGuess() {
         const rowsUsed = localStats.history.length;
 
         localStats.played++;
+
         if (win) {
             localStats.wins++;
             localStats.totalRows += rowsUsed;
@@ -847,7 +873,7 @@ async function submitGuess() {
             }
         }
 
-        localStats.lastDate = today; // Mark as played today
+        localStats.lastDate = today;
         saveLocalStats();
 
         await syncGlobalData({
@@ -867,9 +893,13 @@ async function submitGuess() {
 
 async function syncGlobalData(game) {
     const playerPath = `${FIREBASE_BASE}/stats/${today}/${difficultyKey()}/${playerId}.json`;
+
     try {
-        const res = await fetch(`${playerPath}?t=${Date.now()}`, { cache: "no-store" });
+        const res = await fetch(`${playerPath}?t=${Date.now()}`, {
+            cache: "no-store"
+        });
         const existing = await res.json();
+
         if (existing) return;
 
         await fetch(playerPath, {
@@ -887,7 +917,9 @@ async function fetchAndRenderGlobal() {
     if (!chart) return;
 
     try {
-        const res = await fetch(`${getStatsUrl()}?t=${Date.now()}`, { cache: "no-store" });
+        const res = await fetch(`${getStatsUrl()}?t=${Date.now()}`, {
+            cache: "no-store"
+        });
         const data = await res.json();
 
         const dist = [0, 0, 0, 0, 0, 0, 0];
@@ -897,7 +929,9 @@ async function fetchAndRenderGlobal() {
         if (data) {
             Object.values(data).forEach(game => {
                 if (!game) return;
+
                 totalPlayed++;
+
                 if (game.win === true && game.rows >= 1 && game.rows <= 6) {
                     dist[game.rows - 1]++;
                     totalWins++;
@@ -908,9 +942,11 @@ async function fetchAndRenderGlobal() {
         }
 
         const maxVal = Math.max(...dist, 1);
+
         chart.innerHTML = dist.map((count, i) => {
             const label = i < 6 ? (i + 1) : "X";
             const width = count > 0 ? Math.max((count / maxVal) * 100, 8) : 8;
+
             return `
                 <div class="dist-row">
                     <span>${label}</span>
@@ -919,11 +955,20 @@ async function fetchAndRenderGlobal() {
             `;
         }).join("");
 
-        document.getElementById("g-played").innerText = totalPlayed;
-        document.getElementById("g-wins").innerText = totalWins;
-        document.getElementById("g-winrate").innerText = totalPlayed === 0 ? "0%" : `${Math.round((totalWins / totalPlayed) * 100)}%`;
+        const gPlayed = document.getElementById("g-played");
+        const gWins = document.getElementById("g-wins");
+        const gWinrate = document.getElementById("g-winrate");
+
+        if (gPlayed) gPlayed.innerText = totalPlayed;
+        if (gWins) gWins.innerText = totalWins;
+        if (gWinrate) {
+            gWinrate.innerText = totalPlayed === 0
+                ? "0%"
+                : `${Math.round((totalWins / totalPlayed) * 100)}%`;
+        }
 
     } catch (e) {
+        console.error("Global stats read error:", e);
         chart.innerText = "Today's stats unavailable";
     }
 }
@@ -937,10 +982,16 @@ function updateStatsUI() {
     if (sPlayed) sPlayed.innerText = localStats.played;
     if (sWins) sWins.innerText = localStats.wins;
 
-    const avg = localStats.wins === 0 ? "0" : (localStats.totalRows / localStats.wins).toFixed(1);
+    const avg = localStats.wins === 0
+        ? "0"
+        : (localStats.totalRows / localStats.wins).toFixed(1);
+
     if (sAvg) sAvg.innerText = avg;
 
-    const winRate = localStats.played === 0 ? "0%" : `${Math.round((localStats.wins / localStats.played) * 100)}%`;
+    const winRate = localStats.played === 0
+        ? "0%"
+        : `${Math.round((localStats.wins / localStats.played) * 100)}%`;
+
     if (sWinrate) sWinrate.innerText = winRate;
 }
 
@@ -1007,6 +1058,7 @@ https://pizzabageldonut.com`;
         });
     }
 }
+    /* Pizza Bagel Donut source ownership: Kelly Choi */
 </script>
 </body>
 </html>
